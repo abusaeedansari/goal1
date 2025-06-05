@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en" class="dark"> <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypingMaster Pro :: Elite Practice</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        }
+        .font-mono-custom {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+        .word-input {
+            font-size: 1.8rem;
+            padding: 0.75rem;
+            border: 2px solid #4b5563; /* gray-600 */
+            border-radius: 0.375rem; /* rounded-md */
+            text-align: center;
+            background-color: #1f2937; /* gray-800 */
+            color: #e5e7eb; /* gray-200 */
+        }
+        .word-input:focus {
+            border-color: #60a5fa; /* blue-400 */
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.5);
+        }
+        .word-input.correct-input { border-color: #34d399; /* green-400 */ }
+        .word-input.incorrect-input { border-color: #f87171; /* red-400 */ }
+
+        .word-display {
+            font-size: 2.5rem;
+            padding: 1.5rem;
+            background-color: #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
+            border-radius: 0.5rem; /* rounded-lg */
+            margin: 1rem 0;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .word-display-correct { color: #6ee7b7; /* emerald-300 */ }
+        .word-display-incorrect { color: #fca5a5; /* red-300 */ }
+
+        .stat-card {
+            background-color: #1f2937; /* gray-800 */
+            border: 1px solid #374151; /* gray-700 */
+            border-radius: 0.5rem; /* rounded-lg */
+            padding: 1.25rem; /* p-5 */
+        }
+        .btn {
+            padding: 0.5rem 1rem; /* py-2 px-4 */
+            border-radius: 0.375rem; /* rounded-md */
+            font-weight: 500; /* font-medium */
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+            border: 1px solid transparent;
+        }
+        .btn-primary { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+        .btn-primary:hover { background-color: #2563eb; }
+        .btn-secondary { background-color: #4b5563; color: #e5e7eb; border-color: #4b5563; }
+        .btn-secondary:hover { background-color: #6b7280; }
+        .btn-danger { background-color: #ef4444; color: white; border-color: #ef4444; }
+        .btn-danger:hover { background-color: #dc2626; }
+        .btn-icon { background-color: transparent; color: #9ca3af; padding: 0.5rem; }
+        .btn-icon:hover { color: #e5e7eb; background-color: #374151; }
+
+        /* Modal Styles */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); }
+        .modal-content { background-color: #1f2937; margin: 10% auto; padding: 20px; border: 1px solid #374151; width: 80%; max-width: 700px; border-radius: 0.5rem; color: #e5e7eb; }
+        .modal-close-btn { color: #9ca3af; float: right; font-size: 28px; font-weight: normal; }
+        .modal-close-btn:hover, .modal-close-btn:focus { color: #e5e7eb; text-decoration: none; cursor: pointer; }
+        .chart-container-modal { height: 350px; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-300">
+    <div id="app" class="min-h-screen flex flex-col">
+        <header class="bg-gray-800 shadow-md sticky top-0 z-50 border-b border-gray-700">
+            <div class="container mx-auto px-6 py-3 flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-medium text-blue-400"><i class="fas fa-tachometer-alt mr-2"></i>TypingMaster Elite</h1>
+                    <p class="text-gray-400 text-sm" id="headerSubtitle">SPACEBAR to submit attempt</p>
+                </div>
+                 <button id="stopFocusedPracticeBtn" class="btn btn-danger" style="display: none;">
+                    <i class="fas fa-stop-circle mr-2"></i>Stop Drill
+                </button>
+            </div>
+        </header>
+
+        <main class="container mx-auto px-6 py-6 flex-grow">
+            <section id="training-section" class="mb-10">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="stat-card">
+                        <h3 class="text-base font-medium mb-1 text-gray-400"><i class="fas fa-stopwatch mr-2 text-blue-400"></i>Last Attempt WPM</h3>
+                        <div class="text-3xl font-medium text-blue-300" id="lastWordWPM">0 <span class="text-lg">WPM</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <h3 class="text-base font-medium mb-1 text-gray-400"><i class="fas fa-crosshairs mr-2 text-green-400"></i>Session Accuracy</h3>
+                        <div class="text-3xl font-medium text-green-300" id="sessionAccuracy">100 <span class="text-lg">%</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <h3 class="text-base font-medium mb-1 text-gray-400"><i class="fas fa-trophy mr-2 text-yellow-400"></i>Words Mastered (110WPMx3 Sets of 20)</h3>
+                        <div class="text-3xl font-medium text-yellow-300" id="wordsMastered">0</div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg shadow-lg p-6 mb-6 border border-gray-700">
+                    <div class="text-center mb-4">
+                        <div class="word-display font-mono-custom" id="currentWord">start</div>
+                        <div class="my-3" id="practiceModeInfoDisplay" min-h-[40px]>
+                            {/* Content dynamically injected by JS */}
+                        </div>
+                        <input type="text" id="wordInput" class="word-input font-mono-custom w-full max-w-md mx-auto" placeholder="type here..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                        <div id="feedbackMessage" class="mt-2 text-sm min-h-[20px]">&nbsp;</div>
+                    </div>
+                    <div class="mt-4 text-center space-x-3">
+                        <button id="retryStandardSetBtn" class="btn btn-secondary"><i class="fas fa-redo mr-1"></i>Retry Standard Reps</button>
+                        <button id="skipCurrentWordBtn" class="btn btn-secondary"><i class="fas fa-forward mr-1"></i>Skip Word</button>
+                        <button id="practiceFailedListBtn" class="btn btn-secondary"><i class="fas fa-list-ul mr-1"></i>Practice Failed List</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="charts-overview-section" class="mb-10">
+                <h2 class="text-xl font-medium mb-4 text-gray-200">Overall Performance Snapshots</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-700">
+                        <h3 class="text-base font-medium mb-3 text-gray-300"><i class="fas fa-chart-line mr-2 text-blue-400"></i>Recent WPM</h3>
+                        <div class="h-64"><canvas id="wpmChart"></canvas></div>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-700">
+                        <h3 class="text-base font-medium mb-3 text-gray-300"><i class="fas fa-chart-pie mr-2 text-green-400"></i>Recent Accuracy</h3>
+                        <div class="h-64"><canvas id="accuracyChart"></canvas></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="word-hub-section">
+                 <div class="bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 border border-gray-700">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                        <h2 class="text-xl font-medium text-gray-200 mb-2 sm:mb-0"><i class="fas fa-book-open mr-2 text-indigo-400"></i>Word Hub & Mastery Center</h2>
+                        <button id="exportDataBtn" class="btn btn-secondary text-sm"><i class="fas fa-download mr-2"></i>Export Progress</button>
+                    </div>
+                    <div class="overflow-x-auto max-h-[600px]">
+                        <table class="w-full table-fixed">
+                            <thead class="sticky top-0 bg-gray-750 z-10"><tr class="border-b border-gray-600">
+                                <th class="w-1/6 text-left py-2 px-3 font-medium text-gray-400 text-sm">Word</th>
+                                <th class="w-2/6 text-left py-2 px-3 font-medium text-gray-400 text-sm">Status</th>
+                                <th class="w-1/12 text-left py-2 px-3 font-medium text-gray-400 text-sm">Best</th>
+                                <th class="w-1/12 text-left py-2 px-3 font-medium text-gray-400 text-sm">Avg</th>
+                                <th class="w-1/12 text-left py-2 px-3 font-medium text-gray-400 text-sm">Att.</th>
+                                <th class="w-2/12 text-center py-2 px-3 font-medium text-gray-400 text-sm">Actions</th>
+                            </tr></thead>
+                            <tbody id="wordHubTableBody" class="divide-y divide-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <footer class="bg-gray-800 shadow-inner mt-auto border-t border-gray-700"><div class="container mx-auto px-6 py-3 text-center text-gray-500 text-xs">TypingMaster Elite &copy; 2024-2025</div></footer>
+    </div>
+
+    <div id="wordGraphModal" class="modal"><div class="modal-content">
+        <span class="modal-close-btn" id="closeWordGraphModalBtn">&times;</span>
+        <h3 id="wordGraphModalTitle" class="text-lg font-medium mb-4"></h3>
+        <div class="chart-container-modal"><canvas id="perWordWpmChart"></canvas></div>
+    </div></div>
+
+    <script>
+        const COMMON_WORDS = [
+            "the", "be", "to", "of", "and", "a", "in", "that", "have", "i", "it", "for", "not", "on", "with", "he", "as", "you", "do", "at",
+            "this", "but", "his", "by", "from", "they", "we", "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their",
+            "what", "so", "up", "out", "if", "about", "who", "get", "which", "go", "me", "when", "make", "can", "like", "time", "no", "just", "him",
+            "know", "take", "people", "into", "year", "your", "good", "some", "could", "them", "see", "other", "than", "then", "now", "look", "only",
+            "come", "its", "over", "think", "also", "back", "after", "use", "two", "how", "our", "work", "first", "well", "way", "even", "new", "want",
+            "because", "any", "these", "give", "day", "most", "us", "is", "was", "are", "been", "has", "had"
+        ];
+
+        const TARGET_SET_AVERAGE_WPM = 110;
+        // MODIFICATION START: Changed ATTEMPTS_PER_SUCCESSFUL_SET from 3 to 20
+        const ATTEMPTS_PER_SUCCESSFUL_SET = 20;
+        // MODIFICATION END
+        const SETS_REQUIRED_FOR_MASTERY = 3;
+        const STANDARD_REPS_COUNT = 20; // For standard practice mode
+
+        class TypingTrainer {
+            constructor() {
+                this.currentWord = '';
+                this.currentWordIndex = 0; // For standard mode progression
+                this.currentRepAttempt = 1; // For standard mode reps, or attempts within a mastery set
+
+                this.practiceMode = 'standard'; // 'standard', 'masteryDrill', 'failedList'
+                this.wordForDrill = null;
+
+                this.wordStartTime = null;
+                this.sessionStats = { correctWords: 0, totalAttempts: 0 };
+                this.wordPerformance = JSON.parse(localStorage.getItem('wordPerformance')) || {};
+                this.failedWords = JSON.parse(localStorage.getItem('failedWords')) || [];
+                
+                this.wpmChart = null; this.accuracyChart = null; this.perWordChartInstance = null;
+
+                this.dom = { // Cache DOM elements for performance and clarity
+                    wordInput: document.getElementById('wordInput'),
+                    currentWordDisplay: document.getElementById('currentWord'),
+                    lastWordWPM: document.getElementById('lastWordWPM'),
+                    sessionAccuracy: document.getElementById('sessionAccuracy'),
+                    wordsMastered: document.getElementById('wordsMastered'),
+                    practiceModeInfoDisplay: document.getElementById('practiceModeInfoDisplay'),
+                    feedbackMessage: document.getElementById('feedbackMessage'),
+                    stopFocusedPracticeBtn: document.getElementById('stopFocusedPracticeBtn'),
+                    headerSubtitle: document.getElementById('headerSubtitle'),
+                    wordHubTableBody: document.getElementById('wordHubTableBody'),
+                    wordGraphModal: document.getElementById('wordGraphModal'),
+                    closeWordGraphModalBtn: document.getElementById('closeWordGraphModalBtn'),
+                    wordGraphModalTitle: document.getElementById('wordGraphModalTitle'),
+                };
+                this.initializeApp();
+            }
+
+            initializeApp() {
+                COMMON_WORDS.forEach(word => {
+                    if (!this.wordPerformance[word]) {
+                        this.wordPerformance[word] = this.getNewWordPerfObject();
+                    } else { // Ensure new fields exist for older data
+                        if (this.wordPerformance[word].successfulMasterySets === undefined) this.wordPerformance[word].successfulMasterySets = 0;
+                        if (this.wordPerformance[word].currentSetAttemptsData === undefined) this.wordPerformance[word].currentSetAttemptsData = [];
+                        if (this.wordPerformance[word].isFullyMastered === undefined) this.wordPerformance[word].isFullyMastered = false;
+                    }
+                });
+                this.saveData();
+                this.setupEventListeners();
+                this.loadNewWord(); // Initial word load
+                this.updateDisplayUI();
+                this.initializeCharts();
+                this.populateWordHub();
+                this.dom.wordInput.focus();
+            }
+            
+            getNewWordPerfObject() {
+                return {
+                    attempts: 0, correctAttempts: 0, bestWPM: 0, totalWPM: 0, timestamps: [],
+                    successfulMasterySets: 0, currentSetAttemptsData: [], isFullyMastered: false
+                };
+            }
+
+            setupEventListeners() {
+                this.dom.wordInput.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        if (this.dom.wordInput.value.trim() !== '') this.submitWord();
+                    } else {
+                         this.dom.feedbackMessage.innerHTML = '&nbsp;';
+                         this.dom.wordInput.classList.remove('correct-input', 'incorrect-input');
+                         this.dom.currentWordDisplay.classList.remove('word-display-correct', 'word-display-incorrect');
+                    }
+                });
+                this.dom.wordInput.addEventListener('input', () => {
+                    if (!this.wordStartTime && this.dom.wordInput.value.trim() !== '') this.wordStartTime = Date.now();
+                });
+
+                document.getElementById('retryStandardSetBtn').addEventListener('click', () => this.startStandardPractice(this.currentWord));
+                document.getElementById('skipCurrentWordBtn').addEventListener('click', () => this.skipCurrentWord());
+                document.getElementById('practiceFailedListBtn').addEventListener('click', () => this.startFailedWordsPractice());
+                document.getElementById('exportDataBtn').addEventListener('click', () => this.exportData());
+                this.dom.stopFocusedPracticeBtn.addEventListener('click', () => this.stopFocusedPractice());
+                this.dom.closeWordGraphModalBtn.addEventListener('click', () => this.dom.wordGraphModal.style.display = 'none');
+                window.addEventListener('click', (event) => { if (event.target == this.dom.wordGraphModal) this.dom.wordGraphModal.style.display = 'none'; });
+            }
+
+            // --- Practice Mode Management ---
+            setPracticeMode(mode, wordToFocus = null) {
+                this.practiceMode = mode;
+                this.wordForDrill = wordToFocus;
+                this.currentRepAttempt = 1; // Reset rep/attempt counter for the mode
+
+                if (mode === 'standard' && wordToFocus) {
+                    const wordIndex = COMMON_WORDS.indexOf(wordToFocus);
+                    this.currentWordIndex = wordIndex !== -1 ? wordIndex : this.currentWordIndex; // Start standard from this word
+                }
+                this.loadNewWord();
+                this.updatePracticeModeUI();
+            }
+
+            startStandardPractice(word) { this.setPracticeMode('standard', word); }
+
+            // MODIFICATION START: Adjusted startMasteryDrill
+            startMasteryDrill(word) {
+                const perf = this.wordPerformance[word];
+                // If trying to re-drill a mastered word, reset its mastery progress
+                if (perf.isFullyMastered) {
+                    perf.successfulMasterySets = 0;
+                    perf.currentSetAttemptsData = [];
+                    perf.isFullyMastered = false;
+                    this.showTemporaryFeedback(`Resetting mastery for "${word}". Starting drill from Set 1.`, 'info');
+                    this.updateDisplayUI(); // Update general UI like "Words Mastered" count
+                    this.populateWordHub(); // Refresh hub to show new status
+                }
+                // For a word not yet mastered, or a reset word, it will continue from its current state.
+                this.setPracticeMode('masteryDrill', word);
+                document.getElementById('training-section').scrollIntoView({ behavior: 'smooth' });
+            }
+            // MODIFICATION END
+
+            startFailedWordsPractice() {
+                if (this.failedWords.length > 0) this.setPracticeMode('failedList', this.failedWords[0]);
+                else this.showTemporaryFeedback("Failed list is empty!", "info");
+            }
+            stopFocusedPractice() { this.setPracticeMode('standard'); }
+
+            // MODIFICATION START: Adjusted updatePracticeModeUI for new ATTEMPTS_PER_SUCCESSFUL_SET
+            updatePracticeModeUI() {
+                let infoHtml = '';
+                this.dom.headerSubtitle.textContent = "SPACEBAR to submit attempt";
+                if (this.practiceMode === 'masteryDrill' && this.wordForDrill) {
+                    const perf = this.wordPerformance[this.wordForDrill];
+                    infoHtml = `Mastery Drill: <span class="font-medium text-yellow-300">${this.wordForDrill}</span><br>
+                                Set ${perf.successfulMasterySets + 1} of ${SETS_REQUIRED_FOR_MASTERY}.
+                                Attempt ${perf.currentSetAttemptsData.length + 1} of ${ATTEMPTS_PER_SUCCESSFUL_SET}.<br>
+                                Target Average: <span class="font-medium text-yellow-300">${TARGET_SET_AVERAGE_WPM} WPM</span> for this set.`;
+                    this.dom.stopFocusedPracticeBtn.style.display = 'inline-block';
+                    this.dom.headerSubtitle.textContent = `Drilling "${this.wordForDrill}" for Mastery. SPACEBAR to submit.`;
+                } else if (this.practiceMode === 'failedList' && this.wordForDrill) {
+                    infoHtml = `Practicing Failed Word: <span class="font-medium text-red-300">${this.wordForDrill}</span>. Type correctly to clear.`;
+                    this.dom.stopFocusedPracticeBtn.style.display = 'inline-block';
+                } else { // Standard mode
+                    infoHtml = `Standard Practice: Repetition <span class="font-medium text-blue-300">${this.currentRepAttempt}</span> of <span class="font-medium text-blue-300">${STANDARD_REPS_COUNT}</span>.`;
+                    this.dom.stopFocusedPracticeBtn.style.display = 'none';
+                }
+                this.dom.practiceModeInfoDisplay.innerHTML = infoHtml;
+            }
+            // MODIFICATION END
+            
+            loadNewWord() {
+                this.dom.wordInput.value = ''; this.dom.wordInput.focus(); this.wordStartTime = null;
+                this.dom.wordInput.classList.remove('correct-input', 'incorrect-input');
+                this.dom.currentWordDisplay.classList.remove('word-display-correct', 'word-display-incorrect');
+
+                if ((this.practiceMode === 'masteryDrill' || this.practiceMode === 'failedList') && this.wordForDrill) {
+                    this.currentWord = this.wordForDrill;
+                } else {
+                    this.practiceMode = 'standard'; // Ensure fallback to standard if drill conditions aren't met
+                    this.currentWord = COMMON_WORDS[this.currentWordIndex % COMMON_WORDS.length];
+                }
+                this.dom.currentWordDisplay.textContent = this.currentWord;
+                this.updatePracticeModeUI(); // Update display based on current word and mode
+            }
+
+            // MODIFICATION START: Major changes to submitWord for Mastery Drill logic
+            submitWord() {
+                const typedWord = this.dom.wordInput.value.trim(); if (typedWord === '') return;
+                const isCorrect = typedWord === this.currentWord;
+                const timeElapsed = this.wordStartTime ? (Date.now() - this.wordStartTime) / 1000 : Infinity;
+                const wpm = (timeElapsed > 0 && timeElapsed !== Infinity) ? Math.round((this.currentWord.length / 5) / (timeElapsed / 60)) : 0;
+
+                this.sessionStats.totalAttempts++;
+                const perf = this.wordPerformance[this.currentWord]; 
+                perf.attempts++;
+                perf.timestamps.push({ date: Date.now(), wpm: wpm, correct: isCorrect });
+                this.dom.lastWordWPM.innerHTML = `${wpm} <span class="text-lg">WPM</span>`;
+
+                if (isCorrect) {
+                    this.sessionStats.correctWords++; perf.correctAttempts++;
+                    if (wpm > perf.bestWPM) perf.bestWPM = wpm;
+                    perf.totalWPM += wpm;
+                    
+                    this.dom.wordInput.classList.add('correct-input'); this.dom.currentWordDisplay.classList.add('word-display-correct');
+                    // Feedback for immediate WPM, more specific feedback for sets will follow
+                    this.showTemporaryFeedback(`${wpm} WPM - Correct!`, 'success'); 
+                    this.failedWords = this.failedWords.filter(w => w !== this.currentWord);
+
+                    if (this.practiceMode === 'masteryDrill') {
+                        perf.currentSetAttemptsData.push({ wpm });
+
+                        if (perf.currentSetAttemptsData.length >= ATTEMPTS_PER_SUCCESSFUL_SET) { // A set is completed
+                            const setWPMs = perf.currentSetAttemptsData.map(a => a.wpm);
+                            const setAverageWPM = setWPMs.reduce((sum, val) => sum + val, 0) / setWPMs.length;
+
+                            if (setAverageWPM >= TARGET_SET_AVERAGE_WPM) {
+                                perf.successfulMasterySets++;
+                                if (perf.successfulMasterySets >= SETS_REQUIRED_FOR_MASTERY) {
+                                    perf.isFullyMastered = true;
+                                    this.showTemporaryFeedback(`MASTERED "${this.currentWord}"! Avg ${setAverageWPM.toFixed(0)} WPM. All ${SETS_REQUIRED_FOR_MASTERY} sets complete.`, 'trophy');
+                                    this.stopFocusedPractice(); // This will change mode and load a new word
+                                } else {
+                                    // Override the simple "Correct!" feedback with set pass information
+                                    this.showTemporaryFeedback(`Set ${perf.successfulMasterySets} PASSED! Avg: ${setAverageWPM.toFixed(0)} WPM. Starting Set ${perf.successfulMasterySets + 1}.`, 'success');
+                                }
+                            } else {
+                                // Set failed, successfulMasterySets does NOT change.
+                                // Override the simple "Correct!" feedback with set fail information
+                                this.showTemporaryFeedback(`Set ${perf.successfulMasterySets + 1} FAILED. Avg: ${setAverageWPM.toFixed(0)} WPM (Target ${TARGET_SET_AVERAGE_WPM}). Try Set ${perf.successfulMasterySets + 1} again.`, 'error');
+                            }
+                            perf.currentSetAttemptsData = []; // Reset attempts data for the next set (or retry of current set)
+                        }
+                        
+                        // If not fully mastered and still in masteryDrill mode (stopFocusedPractice wasn't called)
+                        // Load the same word for the next attempt in the current set, or the first attempt of the next set.
+                        if (this.practiceMode === 'masteryDrill') { 
+                           this.loadNewWord(); 
+                        }
+                    } else if (this.practiceMode === 'failedList') {
+                        if (this.failedWords.length > 0) this.setPracticeMode('failedList', this.failedWords[0]);
+                        else {this.showTemporaryFeedback("Failed list cleared!", 'success'); this.stopFocusedPractice(); }
+                    } else { // Standard Mode
+                        this.currentRepAttempt++;
+                        if (this.currentRepAttempt > STANDARD_REPS_COUNT) {
+                            this.currentRepAttempt = 1;
+                            this.currentWordIndex = (this.currentWordIndex + 1) % COMMON_WORDS.length;
+                        }
+                        this.loadNewWord(); 
+                    }
+                } else { // Incorrect
+                    this.dom.wordInput.classList.add('incorrect-input'); this.dom.currentWordDisplay.classList.add('word-display-incorrect');
+                    this.showTemporaryFeedback('Incorrect. Try again.', 'error');
+                    if (!this.failedWords.includes(this.currentWord)) this.failedWords.push(this.currentWord);
+                    // Do not advance in any mode on incorrect attempt; user must retype.
+                    this.dom.wordInput.value = ''; this.dom.wordInput.focus(); this.wordStartTime = null; 
+                }
+                this.saveData(); this.updateDisplayUI(); this.updateCharts(); this.populateWordHub();
+            }
+            // MODIFICATION END
+            
+            showTemporaryFeedback(message, type = 'info') {
+                this.dom.feedbackMessage.textContent = message;
+                this.dom.feedbackMessage.className = 'mt-2 text-sm min-h-[20px]';
+                const colors = {'success':'text-green-400', 'error':'text-red-400', 'info':'text-blue-400', 'trophy':'text-yellow-400 font-medium'};
+                if (colors[type]) this.dom.feedbackMessage.classList.add(colors[type]);
+            }
+
+            skipCurrentWord() {
+                if (this.practiceMode === 'masteryDrill' || this.practiceMode === 'failedList') this.stopFocusedPractice();
+                else {
+                    this.currentRepAttempt = 1;
+                    this.currentWordIndex = (this.currentWordIndex + 1) % COMMON_WORDS.length;
+                    this.loadNewWord();
+                }
+            }
+
+            updateDisplayUI() { 
+                const acc = this.sessionStats.totalAttempts > 0 ? Math.round((this.sessionStats.correctWords / this.sessionStats.totalAttempts) * 100) : 100;
+                this.dom.sessionAccuracy.innerHTML = `${acc} <span class="text-lg">%</span>`;
+                const masteredCount = Object.values(this.wordPerformance).filter(w => w.isFullyMastered).length;
+                this.dom.wordsMastered.textContent = masteredCount;
+                this.updatePracticeModeUI(); 
+            }
+
+            // MODIFICATION START: Adjusted populateWordHub status text and button title
+            populateWordHub() {
+                this.dom.wordHubTableBody.innerHTML = '';
+                COMMON_WORDS.forEach(word => {
+                    const data = this.wordPerformance[word];
+                    const accuracy = data.attempts > 0 ? Math.round((data.correctAttempts / data.attempts) * 100) : 0;
+                    const avgWPMOverall = data.correctAttempts > 0 ? Math.round(data.totalWPM / data.correctAttempts) : 0;
+                    
+                    let statusText; let statusClass = 'text-gray-400';
+                    if (data.isFullyMastered) {
+                        statusText = `Mastered (${TARGET_SET_AVERAGE_WPM}WPMx${SETS_REQUIRED_FOR_MASTERY} Sets of ${ATTEMPTS_PER_SUCCESSFUL_SET} reps)`; statusClass = 'text-yellow-400 font-semibold';
+                    } else if (data.successfulMasterySets < SETS_REQUIRED_FOR_MASTERY && (data.currentSetAttemptsData.length > 0 || data.successfulMasterySets > 0 || data.attempts > 0)) {
+                        // This covers states:
+                        // - In the middle of any set (currentSetAttemptsData.length > 0)
+                        // - Completed some sets, ready for the next (successfulMasterySets > 0, currentSetAttemptsData.length == 0)
+                        // - Practiced but not started mastery sets yet (attempts > 0, successfulMasterySets == 0, currentSetAttemptsData.length == 0)
+                        statusText = `Set ${data.successfulMasterySets + 1}/${SETS_REQUIRED_FOR_MASTERY} (Att: ${data.currentSetAttemptsData.length}/${ATTEMPTS_PER_SUCCESSFUL_SET})`; 
+                        statusClass = 'text-blue-300';
+                        if (data.successfulMasterySets === 0 && data.currentSetAttemptsData.length === 0 && data.attempts > 0 && !data.isFullyMastered) {
+                             statusText = `Ready for Set 1/${SETS_REQUIRED_FOR_MASTERY} (Att: 0/${ATTEMPTS_PER_SUCCESSFUL_SET})`;
+                        }
+                    } else if (data.attempts > 0) { // General practiced state if no mastery progress
+                        statusText = `Practiced (Ready for Mastery)`; statusClass = 'text-gray-300';
+                    }
+                     else { statusText = 'Not Practiced'; statusClass = 'text-gray-500';}
+
+
+                    const row = document.createElement('tr'); row.className = 'hover:bg-gray-750 transition-colors text-sm';
+                    row.innerHTML = `
+                        <td class="py-2 px-3 font-mono-custom text-gray-200">${word}</td>
+                        <td class="py-2 px-3 ${statusClass}">${statusText}</td>
+                        <td class="py-2 px-3 text-gray-300">${data.bestWPM}</td>
+                        <td class="py-2 px-3 text-gray-300">${avgWPMOverall}</td>
+                        <td class="py-2 px-3 text-gray-300">${data.attempts}</td>
+                        <td class="py-2 px-3 text-center space-x-1">
+                            <button title="Standard Practice (20 Reps)" class="btn-icon practice-standard-btn" data-word="${word}"><i class="fas fa-redo-alt"></i></button>
+                            <button title="Mastery Drill (${TARGET_SET_AVERAGE_WPM}WPM Avg x${ATTEMPTS_PER_SUCCESSFUL_SET} Reps x${SETS_REQUIRED_FOR_MASTERY} Sets)" class="btn-icon practice-mastery-btn" data-word="${word}"><i class="fas fa-trophy"></i></button>
+                            <button title="Show Graph" class="btn-icon show-graph-btn" data-word="${word}"><i class="fas fa-chart-line"></i></button>
+                        </td>`;
+                    this.dom.wordHubTableBody.appendChild(row);
+                });
+                this.dom.wordHubTableBody.querySelectorAll('.practice-standard-btn').forEach(btn => btn.addEventListener('click', (e) => this.startStandardPractice(e.currentTarget.dataset.word)));
+                this.dom.wordHubTableBody.querySelectorAll('.practice-mastery-btn').forEach(btn => btn.addEventListener('click', (e) => this.startMasteryDrill(e.currentTarget.dataset.word)));
+                this.dom.wordHubTableBody.querySelectorAll('.show-graph-btn').forEach(btn => btn.addEventListener('click', (e) => this.showPerWordGraph(e.currentTarget.dataset.word)));
+            }
+            // MODIFICATION END
+            
+            showPerWordGraph(word) { 
+                const wordData = this.wordPerformance[word];
+                if (!wordData || !wordData.timestamps || wordData.timestamps.length === 0) { this.showTemporaryFeedback(`No attempts recorded for "${word}".`, "info"); return; }
+                this.dom.wordGraphModalTitle.textContent = `WPM Progress for: ${word}`;
+                const labels = wordData.timestamps.map((_, index) => `${index + 1}`);
+                const wpmValues = wordData.timestamps.map(ts => ts.wpm);
+                if (this.perWordChartInstance) this.perWordChartInstance.destroy();
+                this.perWordChartInstance = new Chart(document.getElementById('perWordWpmChart').getContext('2d'), {
+                    type: 'line',
+                    data: { labels, datasets: [{ label: 'WPM', data: wpmValues, borderColor: '#60a5fa', backgroundColor: 'rgba(96, 165, 250, 0.1)', tension: 0.1, borderWidth: 1.5, pointRadius: 2, pointBackgroundColor: '#60a5fa' }] },
+                    options: this.getChartOptions(true)
+                });
+                this.dom.wordGraphModal.style.display = 'block';
+            }
+            getChartOptions(isDark) { 
+                return { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: isDark ? '#9ca3af' : '#6b7280', font: {size: 10} }, grid: { color: isDark ? '#374151' : '#e5e7eb', drawBorder: false } }, x: { ticks: { color: isDark ? '#9ca3af' : '#6b7280', font: {size: 10} }, grid: { display: false } } }, animation: { duration: 0 } };
+            }
+            initializeCharts() { 
+                const options = this.getChartOptions(true);
+                this.wpmChart = new Chart(document.getElementById('wpmChart').getContext('2d'), { type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#60a5fa', tension: 0.3, borderWidth: 1.5, pointRadius: 0 }] }, options: options });
+                this.accuracyChart = new Chart(document.getElementById('accuracyChart').getContext('2d'), { type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#34d399', tension: 0.3, borderWidth: 1.5, pointRadius: 0 }] }, options: {...options, scales: {...options.scales, y: {...options.scales.y, max: 100}}} });
+            }
+            updateCharts() { 
+                const allAttempts = [];
+                Object.values(this.wordPerformance).forEach(data => data.timestamps.forEach(att => allAttempts.push(att)));
+                allAttempts.sort((a, b) => a.date - b.date); const recentAttempts = allAttempts.slice(-20);
+                this.wpmChart.data.labels = recentAttempts.map((_, i) => i + 1); this.wpmChart.data.datasets[0].data = recentAttempts.map(att => att.wpm); this.wpmChart.update('none');
+                const accuracyValues = [];
+                if (allAttempts.length > 0) { for (let i = 0; i < recentAttempts.length; i++) { const currentOverallAttemptIndex = allAttempts.indexOf(recentAttempts[i]); const window = allAttempts.slice(Math.max(0, currentOverallAttemptIndex - 9), currentOverallAttemptIndex + 1); const correctInWindow = window.filter(a => a.correct).length; accuracyValues.push(window.length > 0 ? (correctInWindow / window.length) * 100 : 0); } }
+                this.accuracyChart.data.labels = recentAttempts.map((_, i) => i + 1); this.accuracyChart.data.datasets[0].data = accuracyValues; this.accuracyChart.update('none');
+            }
+            exportData() { 
+                const dataStr = JSON.stringify({ wordPerformance: this.wordPerformance, failedWords: this.failedWords, exportDate: new Date().toISOString() }, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' }); const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `typingmaster-elite-progress-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            }
+            saveData() { 
+                localStorage.setItem('wordPerformance', JSON.stringify(this.wordPerformance));
+                localStorage.setItem('failedWords', JSON.stringify(this.failedWords));
+            }
+        }
+        const trainer = new TypingTrainer();
+    </script>
+</body>
+</html>
